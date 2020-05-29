@@ -1,0 +1,4 @@
+SIP (restart|reboot)
+VOIP (restart|reboot)
+(restart|reboot) SIP
+(restart|reboot) VOIP

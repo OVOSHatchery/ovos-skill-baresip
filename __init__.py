@@ -197,6 +197,27 @@ class SIPSkill(FallbackSkill):
             return True  # if in call always intercept utterance
         return False
 
+    @intent_file_handler("restart.intent")
+    def handle_restart(self, message):
+        if self.sip is not None:
+            self.sip.stop()
+            self.sip = None
+        self.handle_login(message)
+
+    @intent_file_handler("login.intent")
+    def handle_login(self, message):
+        if self.sip is None:
+            if self.settings["gateway"]:
+                self.speak_dialog("sip_login",
+                                  {"gateway": self.settings["gateway"]})
+                self.start_sip()
+            else:
+                self.speak_dialog("credentials_missing")
+        else:
+            self.speak_dialog("sip_running")
+            if self.ask_yesno("want_restart") == "yes":
+                self.handle_restart(message)
+
     @intent_file_handler("call.intent")
     def handle_call_contact(self, message):
         name = message.data["contact"]
