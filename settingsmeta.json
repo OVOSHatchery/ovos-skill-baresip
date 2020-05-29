@@ -1,0 +1,69 @@
+{
+  "skillMetadata": {
+    "sections": [
+      {
+        "name": "SIP credentials",
+        "fields": [
+          {
+            "name": "gateway",
+            "type": "text",
+            "label": "Gateway",
+            "value": "sipxcom.com"
+          },
+          {
+            "name": "user",
+            "type": "text",
+            "label": "user",
+            "value": "user"
+          },
+          {
+            "name": "password",
+            "type": "password",
+            "label": "password",
+            "value": "SECRET"
+          }
+        ]
+      },
+      {
+        "name": "Contact List",
+        "fields": [
+          {
+            "name": "contact_name",
+            "type": "text",
+            "label": "contact name",
+            "value": "name here"
+          },
+          {
+            "name": "contact_address",
+            "type": "text",
+            "label": "contact address",
+            "value": "user@sipxcom.com"
+          },
+          {
+            "name": "add_contact",
+            "type": "checkbox",
+            "label": "update",
+            "value": "false"
+          },
+          {
+            "name": "delete_contact",
+            "type": "checkbox",
+            "label": "delete",
+            "value": "false"
+          }
+        ]
+      },
+      {
+        "name": "Fallback priority",
+        "fields": [
+          {
+            "name": "priority",
+            "type": "number",
+            "label": "priority",
+            "value": "5"
+          }
+        ]
+      }
+    ]
+  }
+}
