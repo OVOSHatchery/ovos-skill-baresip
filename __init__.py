@@ -136,7 +136,9 @@ class SIPSkill(FallbackSkill):
         self.log.info("Call ended")
         self.log.debug("Reason: " + reason)
         self.in_call = False
-        self.speak_dialog("call_ended", {"reason": reason})
+        not_errors = ["hanged up"]
+        if reason.lower().strip() not in not_errors:
+            self.speak_dialog("call_ended", {"reason": reason})
 
     def accept_call(self):
         self.sip.accept_call()
@@ -147,7 +149,7 @@ class SIPSkill(FallbackSkill):
         self.speak_dialog("call_finished")
 
     def add_new_contact(self, name, address, prompt=False):
-        contact = self.contacts.search_contact(address)
+        contact = self.contacts.get_contact(name)
         # new address
         if contact is None:
             self.log.info("Adding new contact {name}:{address}".format(
@@ -156,6 +158,7 @@ class SIPSkill(FallbackSkill):
             self.speak_dialog("contact_added", {"contact": name})
         # update contact (address exist)
         else:
+            contact = self.contacts.search_contact(address)
             if prompt:
                 if self.ask_yesno(self, "update_confirm",
                                   data={"contact": name}) == "no":
