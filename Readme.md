@@ -19,6 +19,10 @@ You can either configure credentials in Baresip or use mycroft.home.ai (your cre
 
     TODO guide for both approaches
 
+You can get free SIP accounts at https://sip2sip.info or https://www.antisip.com
+
+NOTE: I am NOT recommending a specific SIP provider, I found these with a simple google search and verified they work
+
 ## Contacts
 
 You can add contacts under home.mycroft.ai (no privacy!) or manually edit the json file at ```~/.baresip/mycroft_sip```
