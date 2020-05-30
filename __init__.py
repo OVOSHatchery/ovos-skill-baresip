@@ -131,7 +131,7 @@ class SIPSkill(FallbackSkill):
             self.speak_dialog("credentials_missing")
 
     def handle_incoming_call(self, number):
-        contact = self.contacts.search(number)
+        contact = self.contacts.search_contact(number)
         if contact:
             self.speak_dialog("incoming_call", {"contact": contact["name"]},
                               wait=True)
@@ -209,6 +209,8 @@ class SIPSkill(FallbackSkill):
                 self.accept_call()
                 if speech:
                     # TTS in voice call and hang
+                    while not self.sip.call_established:
+                        sleep(0.5) # TODO timeout in case of errors
                     self.sip.speak(speech)
                     self.hang_call()
                 else:
