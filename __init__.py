@@ -17,6 +17,8 @@ class SIPSkill(FallbackSkill):
             self.settings["intercept_allowed"] = True
         if "confirm_operations" not in self.settings:
             self.settings["confirm_operations"] = True
+        if "debug" not in self.settings:
+            self.settings["debug"] = True
         if "priority" not in self.settings:
             self.settings["priority"] = 50
         if "timeout" not in self.settings:
@@ -44,9 +46,7 @@ class SIPSkill(FallbackSkill):
 
         # state trackers
         self._converse_keepalive = None
-        self.waiting = False
-        self.success = False
-        self.in_call = False
+        self.intercepting_utterances = False
         self._old_settings = dict(self.settings)
 
         self.sip = None
@@ -85,7 +85,7 @@ class SIPSkill(FallbackSkill):
                         self.speak_dialog("sip_restart")
                         self.sip.quit()
                         self.sip = None
-                        self.in_call = False  # just in case
+                        self.intercepting_utterances = False  # just in case
                         break
             self._old_settings = dict(self.settings)
         except Exception as e:
@@ -97,7 +97,8 @@ class SIPSkill(FallbackSkill):
             sleep(0.5)
         self.sip = BareSIP(self.settings["user"],
                            self.settings["password"],
-                           self.settings["gateway"], block=False)
+                           self.settings["gateway"], block=False,
+                           debug=self.settings["debug"])
         self.sip.handle_incoming_call = self.handle_incoming_call
         self.sip.handle_call_ended = self.handle_call_ended
         self.sip.handle_login_failure = self.handle_login_failure
@@ -121,7 +122,7 @@ class SIPSkill(FallbackSkill):
         self.log.error("Log in failed!")
         self.sip.quit()
         self.sip = None
-        self.in_call = False  # just in case
+        self.intercepting_utterances = False  # just in case
         if self.settings["user"] is not None and \
                 self.settings["gateway"] is not None and \
                 self.settings["password"] is not None:
@@ -137,12 +138,12 @@ class SIPSkill(FallbackSkill):
         else:
             self.speak_dialog("incoming_call", {"contact": number}, wait=True)
             self.speak_dialog("incoming_call_unk", wait=True)
-        self.in_call = True
+        self.intercepting_utterances = True
 
     def handle_call_ended(self, reason):
         self.log.info("Call ended")
         self.log.debug("Reason: " + reason)
-        self.in_call = False
+        self.intercepting_utterances = False
         not_errors = ["hanged up"]
         if reason.lower().strip() not in not_errors:
             sleep(1)
@@ -153,7 +154,7 @@ class SIPSkill(FallbackSkill):
 
     def hang_call(self):
         self.sip.hang()
-        self.in_call = False
+        self.intercepting_utterances = False
         self.speak_dialog("call_finished")
 
     def add_new_contact(self, name, address, prompt=False):
@@ -196,7 +197,7 @@ class SIPSkill(FallbackSkill):
     def handle_utterance(self, utterance):
         # handle both fallback and converse stage utterances
         # control ongoing calls here
-        if self.in_call:
+        if self.intercepting_utterances:
             if self.voc_match(utterance, 'accept'):
                 speech = None
                 if self.say_vocab and self.voc_match(utterance, 'and_say'):
@@ -247,7 +248,7 @@ class SIPSkill(FallbackSkill):
         contact = self.contacts.get_contact(name)
         if contact is not None:
             self.speak_dialog("calling", {"contact": name}, wait=True)
-            self.in_call = True
+            self.intercepting_utterances = True
             address = contact["url"]
             self.sip.call(address)
         else:
