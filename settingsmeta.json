@@ -30,7 +30,7 @@
           {
             "name": "contact_name",
             "type": "text",
-            "label": "contact name",
+            "label": "contact name, pick something mycroft can understand!",
             "value": "name here"
           },
           {

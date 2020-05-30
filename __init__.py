@@ -6,6 +6,7 @@ from mycroft.util import camel_case_split, create_daemon
 from baresipy.contacts import ContactList
 from baresipy import BareSIP
 from itertools import chain
+from time import sleep
 
 
 class SIPSkill(FallbackSkill):
@@ -14,10 +15,13 @@ class SIPSkill(FallbackSkill):
         # skill settings defaults
         if "intercept_allowed" not in self.settings:
             self.settings["intercept_allowed"] = True
+        if "confirm_operations" not in self.settings:
+            self.settings["confirm_operations"] = True
         if "priority" not in self.settings:
             self.settings["priority"] = 50
         if "timeout" not in self.settings:
             self.settings["timeout"] = 15
+
         if "contact_name" not in self.settings:
             self.settings["contact_name"] = None
         if "contact_address" not in self.settings:
@@ -88,19 +92,17 @@ class SIPSkill(FallbackSkill):
             self.log.exception(e)
 
     def start_sip(self):
-        if self.settings["user"] is not None and \
-                self.settings["gateway"] is not None and \
-                self.settings["password"] is not None:
-            self.sip = BareSIP(self.settings["user"],
-                               self.settings["password"],
-                               self.settings["gateway"], block=False)
-            self.sip.handle_incoming_call = self.handle_incoming_call
-            self.sip.handle_call_ended = self.handle_call_ended
-            self.sip.handle_login_failure = self.handle_login_failure
-            self.sip.handle_login_success = self.handle_login_success
-            self.sip.handle_call_established = self.handle_call_established
-        else:
-            self.speak_dialog("credentials_missing")
+        if self.sip is not None:
+            self.sip.quit()
+            sleep(0.5)
+        self.sip = BareSIP(self.settings["user"],
+                           self.settings["password"],
+                           self.settings["gateway"], block=False)
+        self.sip.handle_incoming_call = self.handle_incoming_call
+        self.sip.handle_call_ended = self.handle_call_ended
+        self.sip.handle_login_failure = self.handle_login_failure
+        self.sip.handle_login_success = self.handle_login_success
+        self.sip.handle_call_established = self.handle_call_established
 
     def get_intro_message(self):
         # welcome dialog on skill install
@@ -119,8 +121,13 @@ class SIPSkill(FallbackSkill):
         self.log.error("Log in failed!")
         self.sip.quit()
         self.sip = None
-        self.speak_dialog("sip_login_fail")
         self.in_call = False  # just in case
+        if self.settings["user"] is not None and \
+                self.settings["gateway"] is not None and \
+                self.settings["password"] is not None:
+            self.speak_dialog("sip_login_fail")
+        else:
+            self.speak_dialog("credentials_missing")
 
     def handle_incoming_call(self, number):
         contact = self.contacts.search(number)
@@ -138,6 +145,7 @@ class SIPSkill(FallbackSkill):
         self.in_call = False
         not_errors = ["hanged up"]
         if reason.lower().strip() not in not_errors:
+            sleep(1)
             self.speak_dialog("call_ended", {"reason": reason})
 
     def accept_call(self):
@@ -255,17 +263,6 @@ class SIPSkill(FallbackSkill):
 
         self.cb = cb
         self.handle_call_contact(message)
-
-    @intent_file_handler("add_contact.intent")
-    def handle_add_contact(self, message):
-        name = message.data["name"]
-        address = message.data["address"]
-        self.add_new_contact(name, address, True)
-
-    @intent_file_handler("remove_contact.intent")
-    def handle_remove_contact(self, message):
-        name = message.data["name"]
-        self.delete_contact(name, True)
 
     # converse
     def converse_keepalive(self):
