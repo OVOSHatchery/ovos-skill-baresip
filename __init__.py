@@ -62,27 +62,30 @@ class SIPSkill(FallbackSkill):
         self.start_sip()
 
     def _on_web_settings_change(self):
-        if self.settings["add_contact"]:
-            if self.settings["contact_name"]:
-                self.add_new_contact(self.settings["contact_name"],
-                                     self.settings["contact_address"])
-                self.settings["add_contact"] = False
-        if self.settings["delete_contact"]:
-            if self.settings["contact_name"]:
-                self.delete_contact(self.settings["contact_name"])
-                self.settings["delete_contact"] = False
+        try:
+            if self.settings["add_contact"]:
+                if self.settings["contact_name"]:
+                    self.add_new_contact(self.settings["contact_name"],
+                                         self.settings["contact_address"])
+                    self.settings["add_contact"] = False
+            if self.settings["delete_contact"]:
+                if self.settings["contact_name"]:
+                    self.delete_contact(self.settings["contact_name"])
+                    self.settings["delete_contact"] = False
 
-        if self.sip is None:
-            self.start_sip()
-        else:
-            for k in ["user", "password", "gateway"]:
-                if self.settings[k] != self._old_settings[k]:
-                    self.speak_dialog("sip_restart")
-                    self.sip.quit()
-                    self.sip = None
-                    self.in_call = False  # just in case
-                    break
-        self._old_settings = dict(self.settings)
+            if self.sip is None:
+                self.start_sip()
+            else:
+                for k in ["user", "password", "gateway"]:
+                    if self.settings[k] != self._old_settings[k]:
+                        self.speak_dialog("sip_restart")
+                        self.sip.quit()
+                        self.sip = None
+                        self.in_call = False  # just in case
+                        break
+            self._old_settings = dict(self.settings)
+        except Exception as e:
+            self.log.exception(e)
 
     def start_sip(self):
         if self.settings["user"] is not None and \
@@ -133,6 +136,7 @@ class SIPSkill(FallbackSkill):
         self.log.info("Call ended")
         self.log.debug("Reason: " + reason)
         self.in_call = False
+        self.speak_dialog("call_ended", {"reason": reason})
 
     def accept_call(self):
         self.sip.accept_call()
@@ -143,22 +147,29 @@ class SIPSkill(FallbackSkill):
         self.speak_dialog("call_finished")
 
     def add_new_contact(self, name, address, prompt=False):
-        if not self.contacts.is_contact(address):
+        contact = self.contacts.search_contact(address)
+        # new address
+        if contact is None:
             self.log.info("Adding new contact {name}:{address}".format(
                 name=name, address=address))
             self.contacts.add_contact(name, address)
             self.speak_dialog("contact_added", {"contact": name})
+        # update contact (address exist)
         else:
-            contact = self.contacts.get_contact(name)
-            if contact["url"] != address:
-                if prompt:
-                    if self.ask_yesno(self, "update_confirm",
-                                      data={"contact": name}) == "no":
-                        return
-                self.log.info("Updating contact {name}:{address}".format(
-                    name=name, address=address))
+            if prompt:
+                if self.ask_yesno(self, "update_confirm",
+                                  data={"contact": name}) == "no":
+                    return
+            self.log.info("Updating contact {name}:{address}".format(
+                name=name, address=address))
+            if name != contact["name"]:
+                # new name (unique ID)
+                self.contacts.remove_contact(contact["name"])
+                self.contacts.add_contact(name, address)
+            else:
+                # new address
                 self.contacts.update_contact(name, address)
-                self.speak_dialog("contact_updated", {"contact": name})
+            self.speak_dialog("contact_updated", {"contact": name})
 
     def delete_contact(self, name, prompt=False):
         if self.contacts.get_contact(name):
