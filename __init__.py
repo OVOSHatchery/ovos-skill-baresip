@@ -337,6 +337,18 @@ class SIPSkill(FallbackSkill):
         self.settings["auto_speech"] = message.data["speech"]
         self.handle_auto_answer(message)
 
+    @intent_file_handler("contacts_list.intent")
+    def handle_list_contacts(self, message):
+        users = self.contacts.list_contacts()
+        self.speak_dialog("contacts_list")
+        for user in users:
+            self.speak(user["name"])
+
+    @intent_file_handler("contacts_number.intent")
+    def handle_number_of_contacts(self, message):
+        users = self.contacts.list_contacts()
+        self.speak_dialog("contacts_number", {"number": len(users)})
+
     # converse
     def converse_keepalive(self):
         while True:
