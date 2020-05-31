@@ -24,10 +24,22 @@ class SIPSkill(FallbackSkill):
         if "timeout" not in self.settings:
             self.settings["timeout"] = 15
 
+        # auto answer incoming calls
+        if "auto_answer" not in self.settings:
+            self.settings["auto_answer"] = False
+        if "auto_reject" not in self.settings:
+            self.settings["auto_reject"] = False
+        if "auto_speech" not in self.settings:
+            self.settings["auto_speech"] = "I am busy, try again later"
+
+        # web ui contacts management
+        self.settings["add_contact"] = False
+        self.settings["delete_contact"] = False
         if "contact_name" not in self.settings:
             self.settings["contact_name"] = None
         if "contact_address" not in self.settings:
             self.settings["contact_address"] = None
+
         # sip creds
         if "user" not in self.settings:
             self.settings["user"] = None
@@ -36,9 +48,6 @@ class SIPSkill(FallbackSkill):
         if "password" not in self.settings:
             self.settings["password"] = None
 
-        self.settings["add_contact"] = False
-        self.settings["delete_contact"] = False
-
         # events
         self.settings_change_callback = self._on_web_settings_change
         self.namespace = self.__class__.__name__.lower()
@@ -46,6 +55,8 @@ class SIPSkill(FallbackSkill):
 
         # state trackers
         self._converse_keepalive = None
+        self.on_hold = False
+        self.muted = False
         self.intercepting_utterances = False
         self._old_settings = dict(self.settings)
 
@@ -131,6 +142,16 @@ class SIPSkill(FallbackSkill):
             self.speak_dialog("credentials_missing")
 
     def handle_incoming_call(self, number):
+        if self.settings["auto_answer"]:
+            self.accept_call()
+            self.sip.speak(self.settings["auto_speech"])
+            self.hang_call()
+            self.log.info("Auto answered call")
+            return
+        if self.settings["auto_reject"]:
+            self.log.info("Auto rejected call")
+            self.hang_call()
+            return
         contact = self.contacts.search_contact(number)
         if contact:
             self.speak_dialog("incoming_call", {"contact": contact["name"]},
@@ -148,6 +169,8 @@ class SIPSkill(FallbackSkill):
         if reason.lower().strip() not in not_errors:
             sleep(1)
             self.speak_dialog("call_ended", {"reason": reason})
+        self.on_hold = False
+        self.muted = False
 
     def accept_call(self):
         self.sip.accept_call()
@@ -198,7 +221,13 @@ class SIPSkill(FallbackSkill):
         # handle both fallback and converse stage utterances
         # control ongoing calls here
         if self.intercepting_utterances:
-            if self.voc_match(utterance, 'accept'):
+            if self.voc_match(utterance, 'reject'):
+                self.hang_call()
+                self.speak_dialog("call_rejected")
+            elif self.muted or self.on_hold:
+                # allow normal mycroft interaction in these cases only
+                return False
+            elif self.voc_match(utterance, 'accept'):
                 speech = None
                 if self.say_vocab and self.voc_match(utterance, 'and_say'):
                     for word in self.say_vocab:
@@ -216,10 +245,16 @@ class SIPSkill(FallbackSkill):
                 else:
                     # User 2 User
                     pass
-            elif self.voc_match(utterance, 'reject'):
-                self.hang_call()
-                self.speak_dialog("call_rejected")
-            return True  # if in call always intercept utterance
+            elif self.voc_match(utterance, 'hold_call'):
+                self.on_hold = True
+                self.sip.hold()
+                self.speak_dialog("call_on_hold")
+            elif self.voc_match(utterance, 'mute'):
+                self.muted = True
+                self.sip.mute()
+                self.speak_dialog("call_muted")
+            # if in call always intercept utterance / assume false activation
+            return True
         return False
 
     @intent_file_handler("restart.intent")
@@ -266,6 +301,21 @@ class SIPSkill(FallbackSkill):
 
         self.cb = cb
         self.handle_call_contact(message)
+
+    @intent_file_handler("resume_call.intent")
+    @intent_file_handler("unmute.intent")
+    def handle_resume(self, message):
+        # TODO can both happen at same time ?
+        if self.on_hold:
+            self.on_hold = False
+            self.speak_dialog("resume_call", wait=True)
+            self.sip.resume()
+        elif self.muted:
+            self.muted = False
+            self.speak_dialog("unmute_call", wait=True)
+            self.sip.unmute()
+        else:
+            self.speak_dialog("no_call")
 
     # converse
     def converse_keepalive(self):
