@@ -25,7 +25,7 @@ NOTE: I am NOT recommending a specific SIP provider, I found these with a simple
 
 note for linphone users, outgoing calls work but incoming calls dont, see https://github.com/BelledonneCommunications/flexisip/issues/95
 
-## Contacts
+## Contacts List
 
 You can add contacts under home.mycroft.ai (no privacy!) or manually edit the json file at ```~/.baresip/mycroft_sip```
 
@@ -33,7 +33,7 @@ NOTE: contacts are WIP, basically a name mycroft can understand mapped to a sip 
 
     TODO guide for both approaches
 
-## Calling
+## Intents
 
 X is assumed to be a previously configured contact
 
@@ -50,6 +50,8 @@ X is assumed to be a previously configured contact
 - answer all calls
 - answer all calls with Y
 - reject all calls
+- how many contacts
+- List contacts
 
 There also a few admin/debug intents, you should never need to use these
 
