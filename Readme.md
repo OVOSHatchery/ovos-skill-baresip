@@ -50,6 +50,7 @@ X is assumed to be a previously configured contact
 - answer all calls
 - answer all calls with Y
 - reject all calls
+- Do not handle calls automatically
 - how many contacts
 - List contacts
 

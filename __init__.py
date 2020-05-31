@@ -93,6 +93,16 @@ class SIPSkill(FallbackSkill):
                 self.delete_contact(self.settings["contact_name"])
                 self.settings["delete_contact"] = False
 
+        if self.settings["auto_reject"]:
+            self.settings["auto_answer"] = False
+        elif self.settings["auto_answer"]:
+            self.settings["auto_reject"] = False
+
+            if self.settings["auto_speech"] != \
+                    self._old_settings["auto_speech"]:
+                self.speak_dialog("accept_all",
+                                  {"speech": self.settings["auto_speech"]})
+
         if self.sip is None:
             self.start_sip()
         else:
