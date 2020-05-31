@@ -1,0 +1,4 @@
+Answer all calls and say {{speech}}
+Answer all incoming calls and say {{speech}}
+Answer all calls with {{speech}}
+Answer all incoming calls with {{speech}}

@@ -317,6 +317,26 @@ class SIPSkill(FallbackSkill):
         else:
             self.speak_dialog("no_call")
 
+    @intent_file_handler("reject_all.intent")
+    def handle_auto_reject(self, message):
+        # TODO dont allow overwrite from web ui
+        self.settings["auto_reject"] = True
+        self.settings["auto_answer"] = False
+        self.speak_dialog("rejecting_all")
+
+    @intent_file_handler("answer_all.intent")
+    def handle_auto_answer(self, message):
+        # TODO dont allow overwrite from web ui
+        self.settings["auto_answer"] = True
+        self.settings["auto_reject"] = False
+        self.speak_dialog("accept_all",
+                          {"speech": self.settings["auto_speech"]})
+
+    @intent_file_handler("answer_all_and_say.intent")
+    def handle_auto_answer_with(self, message):
+        self.settings["auto_speech"] = message.data["speech"]
+        self.handle_auto_answer(message)
+
     # converse
     def converse_keepalive(self):
         while True:
