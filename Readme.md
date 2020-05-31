@@ -41,6 +41,13 @@ X is assumed to be a previously configured contact
 - accept call and say Y
 - hang up
 - reject call
+- hold call
+- resume call
+- mute call
+- unmute call
+- answer all calls
+- answer all calls with Y
+- reject all calls
 
 There also a few admin/debug intents, you should never need to use these
 
