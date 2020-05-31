@@ -83,15 +83,15 @@ class SIPSkill(FallbackSkill):
         #  the issue here is with Selene, if anyone thinks of a  clever
         #  workaround let me know, currently this is WONTFIX, problem
         #  is on mycroft side
-        if self.settings["add_contact"]:
-            if self.settings["contact_name"]:
-                self.add_new_contact(self.settings["contact_name"],
-                                     self.settings["contact_address"])
-                self.settings["add_contact"] = False
-        if self.settings["delete_contact"]:
-            if self.settings["contact_name"]:
-                self.delete_contact(self.settings["contact_name"])
-                self.settings["delete_contact"] = False
+        if self.settings["delete_contact"] and self.settings["contact_name"] \
+                != self._oldsettings["contact_name"]:
+            self.delete_contact(self.settings["contact_name"])
+            self.settings["delete_contact"] = False
+        elif self.settings["add_contact"] and self.settings["contact_name"] \
+                != self._oldsettings["contact_name"]:
+            self.add_new_contact(self.settings["contact_name"],
+                                 self.settings["contact_address"])
+            self.settings["add_contact"] = False
 
         if self.settings["auto_reject"]:
             self.settings["auto_answer"] = False
@@ -104,7 +104,10 @@ class SIPSkill(FallbackSkill):
                                   {"speech": self.settings["auto_speech"]})
 
         if self.sip is None:
-            self.start_sip()
+            if self.settings["gateway"]:
+                self.start_sip()
+            else:
+                self.speak_dialog("credentials_missing")
         else:
             for k in ["user", "password", "gateway"]:
                 if self.settings[k] != self._old_settings[k]:
