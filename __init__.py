@@ -102,6 +102,7 @@ class SIPSkill(FallbackSkill):
                     self.sip.quit()
                     self.sip = None
                     self.intercepting_utterances = False  # just in case
+                    self.start_sip()
                     break
         self._old_settings = dict(self.settings)
 
