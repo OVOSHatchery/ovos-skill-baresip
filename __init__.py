@@ -77,30 +77,32 @@ class SIPSkill(FallbackSkill):
         self.start_sip()
 
     def _on_web_settings_change(self):
-        try:
-            if self.settings["add_contact"]:
-                if self.settings["contact_name"]:
-                    self.add_new_contact(self.settings["contact_name"],
-                                         self.settings["contact_address"])
-                    self.settings["add_contact"] = False
-            if self.settings["delete_contact"]:
-                if self.settings["contact_name"]:
-                    self.delete_contact(self.settings["contact_name"])
-                    self.settings["delete_contact"] = False
+        # TODO settings should be uploaded to backend when changed inside
+        #  skill, but this functionality is gone,
+        #  the issue here is with Selene, if anyone thinks of a  clever
+        #  workaround let me know, currently this is WONTFIX, problem
+        #  is on mycroft side
+        if self.settings["add_contact"]:
+            if self.settings["contact_name"]:
+                self.add_new_contact(self.settings["contact_name"],
+                                     self.settings["contact_address"])
+                self.settings["add_contact"] = False
+        if self.settings["delete_contact"]:
+            if self.settings["contact_name"]:
+                self.delete_contact(self.settings["contact_name"])
+                self.settings["delete_contact"] = False
 
-            if self.sip is None:
-                self.start_sip()
-            else:
-                for k in ["user", "password", "gateway"]:
-                    if self.settings[k] != self._old_settings[k]:
-                        self.speak_dialog("sip_restart")
-                        self.sip.quit()
-                        self.sip = None
-                        self.intercepting_utterances = False  # just in case
-                        break
-            self._old_settings = dict(self.settings)
-        except Exception as e:
-            self.log.exception(e)
+        if self.sip is None:
+            self.start_sip()
+        else:
+            for k in ["user", "password", "gateway"]:
+                if self.settings[k] != self._old_settings[k]:
+                    self.speak_dialog("sip_restart")
+                    self.sip.quit()
+                    self.sip = None
+                    self.intercepting_utterances = False  # just in case
+                    break
+        self._old_settings = dict(self.settings)
 
     def start_sip(self):
         if self.sip is not None:
@@ -144,6 +146,7 @@ class SIPSkill(FallbackSkill):
     def handle_incoming_call(self, number):
         if self.settings["auto_answer"]:
             self.accept_call()
+            self._wait_until_call_established()
             self.sip.speak(self.settings["auto_speech"])
             self.hang_call()
             self.log.info("Auto answered call")
@@ -165,10 +168,6 @@ class SIPSkill(FallbackSkill):
         self.log.info("Call ended")
         self.log.debug("Reason: " + reason)
         self.intercepting_utterances = False
-        not_errors = ["hanged up"]
-        if reason.lower().strip() not in not_errors:
-            sleep(1)
-            self.speak_dialog("call_ended", {"reason": reason})
         self.on_hold = False
         self.muted = False
 
@@ -201,10 +200,11 @@ class SIPSkill(FallbackSkill):
                 # new name (unique ID)
                 self.contacts.remove_contact(contact["name"])
                 self.contacts.add_contact(name, address)
-            else:
+                self.speak_dialog("contact_updated", {"contact": name})
+            elif address != contact["url"]:
                 # new address
                 self.contacts.update_contact(name, address)
-            self.speak_dialog("contact_updated", {"contact": name})
+                self.speak_dialog("contact_updated", {"contact": name})
 
     def delete_contact(self, name, prompt=False):
         if self.contacts.get_contact(name):
@@ -237,9 +237,7 @@ class SIPSkill(FallbackSkill):
                 # answer call
                 self.accept_call()
                 if speech:
-                    # TTS in voice call and hang
-                    while not self.sip.call_established:
-                        sleep(0.5) # TODO timeout in case of errors
+                    self._wait_until_call_established()
                     self.sip.speak(speech)
                     self.hang_call()
                 else:
@@ -251,11 +249,16 @@ class SIPSkill(FallbackSkill):
                 self.speak_dialog("call_on_hold")
             elif self.voc_match(utterance, 'mute'):
                 self.muted = True
-                self.sip.mute()
+                self.sip.mute_mic()
                 self.speak_dialog("call_muted")
             # if in call always intercept utterance / assume false activation
             return True
         return False
+
+    def _wait_until_call_established(self):
+        # TTS in voice call and hang
+        while not self.sip.call_established:
+            sleep(0.5)  # TODO timeout in case of errors
 
     @intent_file_handler("restart.intent")
     def handle_restart(self, message):
@@ -313,7 +316,7 @@ class SIPSkill(FallbackSkill):
         elif self.muted:
             self.muted = False
             self.speak_dialog("unmute_call", wait=True)
-            self.sip.unmute()
+            self.sip.unmute_mic()
         else:
             self.speak_dialog("no_call")
 
@@ -348,6 +351,12 @@ class SIPSkill(FallbackSkill):
     def handle_number_of_contacts(self, message):
         users = self.contacts.list_contacts()
         self.speak_dialog("contacts_number", {"number": len(users)})
+
+    @intent_file_handler("disable_auto.intent")
+    def handle_no_auto_answering(self, message):
+        self.settings["auto_answer"] = False
+        self.settings["auto_reject"] = False
+        self.speak_dialog("no_auto")
 
     # converse
     def converse_keepalive(self):
