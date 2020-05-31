@@ -73,6 +73,7 @@ class SIPSkill(FallbackSkill):
         say_voc = self.find_resource('and_say.voc', 'vocab')
         if say_voc:
             # load vocab and flatten into a simple list
+            # TODO sort by length
             self.say_vocab = list(chain(*read_vocab_file(say_voc)))
         self.start_sip()
 
@@ -160,7 +161,6 @@ class SIPSkill(FallbackSkill):
             self.speak_dialog("incoming_call", {"contact": contact["name"]},
                               wait=True)
         else:
-            self.speak_dialog("incoming_call", {"contact": number}, wait=True)
             self.speak_dialog("incoming_call_unk", wait=True)
         self.intercepting_utterances = True
 
@@ -322,14 +322,12 @@ class SIPSkill(FallbackSkill):
 
     @intent_file_handler("reject_all.intent")
     def handle_auto_reject(self, message):
-        # TODO dont allow overwrite from web ui
         self.settings["auto_reject"] = True
         self.settings["auto_answer"] = False
         self.speak_dialog("rejecting_all")
 
     @intent_file_handler("answer_all.intent")
     def handle_auto_answer(self, message):
-        # TODO dont allow overwrite from web ui
         self.settings["auto_answer"] = True
         self.settings["auto_reject"] = False
         self.speak_dialog("accept_all",

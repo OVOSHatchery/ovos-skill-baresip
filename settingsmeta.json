@@ -65,7 +65,7 @@
           {
             "name": "auto_speech",
             "type": "text",
-            "label": "speak this when automatically answering calls",
+            "label": "speak this when answering",
             "value": "I am busy, call again later"
           },
           {
@@ -73,17 +73,6 @@
             "type": "checkbox",
             "label": "automatically reject all incoming calls",
             "value": "false"
-          }
-        ]
-      },
-      {
-        "name": "Fallback priority",
-        "fields": [
-          {
-            "name": "priority",
-            "type": "number",
-            "label": "priority",
-            "value": "5"
           }
         ]
       }
