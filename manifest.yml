@@ -1,0 +1,7 @@
+dependencies:
+   python:
+      - baresipy>=0.1.1
+      - json_database>=0.1.2
+
+   system:
+        all: baresip
