@@ -11,7 +11,7 @@ from collections import defaultdict
 from xml.etree import cElementTree as ET
 import requests
 from requests.auth import HTTPBasicAuth
-
+from mycroft.messagebus.message import Message
 
 def etree2dict(t):
     d = {t.tag: {} if t.attrib else None}
@@ -211,7 +211,14 @@ class SIPSkill(FallbackSkill):
         self.start_sip()
         if self.settings["sipxcom_sync"]:
             self.sipxcom_sync()
-
+            
+        # Register GUI Events
+        self.handle_gui_state("Clear")
+        self.gui.register_handler("voip.jarbas.acceptCall", self.accept_call)
+        self.gui.register_handler("voip.jarbas.hangCall", self.hang_call)
+        self.gui.register_handler("voip.jarbas.muteCall", self.mute_call)
+        self.gui.register_handler("voip.jarbas.unmuteCall", self.unmute_call)
+        
     def _on_web_settings_change(self):
         # TODO settings should be uploaded to backend when changed inside
         #  skill, but this functionality is gone,
@@ -283,10 +290,19 @@ class SIPSkill(FallbackSkill):
 
     def accept_call(self):
         self.sip.accept_call()
+        self.handle_gui_state("Connected")
 
     def hang_call(self):
         self.sip.hang()
         self.intercepting_utterances = False
+        
+    def mute_call(self):
+        self.gui["call_muted"] = True
+        self.sip.mute_mic()
+    
+    def unmute_call(self):
+        self.gui["call_muted"] = False
+        self.sip.unmute_mic()
 
     def add_new_contact(self, name, address, prompt=False):
         name = name.replace("_", " ").replace("-", " ").strip()
@@ -340,6 +356,7 @@ class SIPSkill(FallbackSkill):
         self.hang_call()
 
     def handle_call_established(self):
+        self.handle_gui_state("Connected")
         if self.cb is not None:
             self.cb()
             self.cb = None
@@ -375,13 +392,18 @@ class SIPSkill(FallbackSkill):
             return
         contact = self.contacts.search_contact(number)
         if contact:
+            self.gui["currentContact"] = contact["name"]
+            self.handle_gui_state("Incoming")
             self.speak_dialog("incoming_call", {"contact": contact["name"]},
                               wait=True)
         else:
+            self.gui["currentContact"] = "Unknown"
+            self.handle_gui_state("Incoming")
             self.speak_dialog("incoming_call_unk", wait=True)
         self.intercepting_utterances = True
 
     def handle_call_ended(self, reason):
+        self.handle_gui_state("Hang")
         self.log.info("Call ended")
         self.log.debug("Reason: " + reason)
         self.intercepting_utterances = False
@@ -453,6 +475,8 @@ class SIPSkill(FallbackSkill):
         self.log.debug("Placing call to " + name)
         contact = self.contacts.get_contact(name)
         if contact is not None:
+            self.gui["currentContact"] = name
+            self.handle_gui_state("Outgoing")
             self.speak_dialog("calling", {"contact": name}, wait=True)
             self.intercepting_utterances = True
             address = contact["url"]
@@ -505,6 +529,8 @@ class SIPSkill(FallbackSkill):
 
     @intent_file_handler("contacts_list.intent")
     def handle_list_contacts(self, message):
+        self.gui["contactListModel"] = self.contacts.list_contacts()
+        self.handle_gui_state("Contacts")
         users = self.contacts.list_contacts()
         self.speak_dialog("contacts_list")
         for user in users:
@@ -565,6 +591,25 @@ class SIPSkill(FallbackSkill):
         self.stop_converse()
         super(SIPSkill, self).shutdown()
 
+    # Handle GUI States Centerally
+    def handle_gui_state(self, state):
+        self.gui["call_muted"] = False
+        if state == "Hang":
+            self.gui["pageState"] = "Disconnected"
+            self.gui.show_page("voipLoader.qml", override_idle=True)
+            time.sleep(5)
+            self.gui["currentContact"] = "Unknown"
+            self.gui.clear()
+            self.enclosure.display_manager.remove_active()
+            self.bus.emit(Message("mycroft.mark2.reset_idle"))
+        elif state == "Clear":
+            self.gui["currentContact"] = "Unknown"
+            self.gui.clear()
+            self.enclosure.display_manager.remove_active()
+            self.bus.emit(Message("mycroft.mark2.reset_idle"))
+        else:
+            self.gui["pageState"] = state
+            self.gui.show_page("voipLoader.qml", override_idle=True)
 
 def create_skill():
     return SIPSkill()
