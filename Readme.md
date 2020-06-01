@@ -2,7 +2,7 @@
 
 Add VOIP capabilities to Mycroft using Baresip
 
-WIP
+![](./voip.gif)
 
 # Install
 
