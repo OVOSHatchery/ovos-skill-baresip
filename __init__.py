@@ -138,52 +138,10 @@ class SIPSkill(FallbackSkill):
         self.speak_dialog("intro", {"skill_name": self.skill_name})
 
     # SIP
-    def handle_call_established(self):
-        if self.cb is not None:
-            self.cb()
-            self.cb = None
-
-    def handle_login_success(self):
-        self.speak_dialog("sip_login_success")
-
-    def handle_login_failure(self):
-        self.log.error("Log in failed!")
-        self.sip.quit()
-        self.sip = None
-        self.intercepting_utterances = False  # just in case
-        if self.settings["user"] is not None and \
-                self.settings["gateway"] is not None and \
-                self.settings["password"] is not None:
-            self.speak_dialog("sip_login_fail")
-        else:
-            self.speak_dialog("credentials_missing")
-
-    def handle_incoming_call(self, number):
-        if self.settings["auto_answer"]:
-            self.accept_call()
-            self._wait_until_call_established()
-            self.sip.speak(self.settings["auto_speech"])
-            self.hang_call()
-            self.log.info("Auto answered call")
-            return
-        if self.settings["auto_reject"]:
-            self.log.info("Auto rejected call")
-            self.hang_call()
-            return
-        contact = self.contacts.search_contact(number)
-        if contact:
-            self.speak_dialog("incoming_call", {"contact": contact["name"]},
-                              wait=True)
-        else:
-            self.speak_dialog("incoming_call_unk", wait=True)
-        self.intercepting_utterances = True
-
-    def handle_call_ended(self, reason):
-        self.log.info("Call ended")
-        self.log.debug("Reason: " + reason)
-        self.intercepting_utterances = False
-        self.on_hold = False
-        self.muted = False
+    def _wait_until_call_established(self):
+        # TTS in voice call and hang
+        while not self.sip.call_established:
+            sleep(0.5)  # TODO timeout in case of errors
 
     def accept_call(self):
         self.sip.accept_call()
@@ -191,7 +149,6 @@ class SIPSkill(FallbackSkill):
     def hang_call(self):
         self.sip.hang()
         self.intercepting_utterances = False
-        self.speak_dialog("call_finished")
 
     def add_new_contact(self, name, address, prompt=False):
         contact = self.contacts.get_contact(name)
@@ -230,6 +187,62 @@ class SIPSkill(FallbackSkill):
             self.contacts.remove_contact(name)
             self.speak_dialog("contact_deleted", {"contact": name})
 
+    def speak_and_hang(self, speech):
+        self._wait_until_call_established()
+        self.sip.mute_mic()
+        self.sip.speak(speech)
+        self.hang_call()
+
+    def handle_call_established(self):
+        if self.cb is not None:
+            self.cb()
+            self.cb = None
+
+    def handle_login_success(self):
+        self.speak_dialog("sip_login_success")
+
+    def handle_login_failure(self):
+        self.log.error("Log in failed!")
+        self.sip.quit()
+        self.sip = None
+        self.intercepting_utterances = False  # just in case
+        if self.settings["user"] is not None and \
+                self.settings["gateway"] is not None and \
+                self.settings["password"] is not None:
+            self.speak_dialog("sip_login_fail")
+        else:
+            self.speak_dialog("credentials_missing")
+
+    def handle_incoming_call(self, number):
+        if number.startswith("sip:"):
+            number = number[4:]
+        if self.settings["auto_answer"]:
+            self.accept_call()
+            self._wait_until_call_established()
+            self.sip.speak(self.settings["auto_speech"])
+            self.hang_call()
+            self.log.info("Auto answered call")
+            return
+        if self.settings["auto_reject"]:
+            self.log.info("Auto rejected call")
+            self.hang_call()
+            return
+        contact = self.contacts.search_contact(number)
+        if contact:
+            self.speak_dialog("incoming_call", {"contact": contact["name"]},
+                              wait=True)
+        else:
+            self.speak_dialog("incoming_call_unk", wait=True)
+        self.intercepting_utterances = True
+
+    def handle_call_ended(self, reason):
+        self.log.info("Call ended")
+        self.log.debug("Reason: " + reason)
+        self.intercepting_utterances = False
+        self.speak_dialog("call_ended", {"reason": reason})
+        self.on_hold = False
+        self.muted = False
+
     # intents
     def handle_utterance(self, utterance):
         # handle both fallback and converse stage utterances
@@ -251,9 +264,7 @@ class SIPSkill(FallbackSkill):
                 # answer call
                 self.accept_call()
                 if speech:
-                    self._wait_until_call_established()
-                    self.sip.speak(speech)
-                    self.hang_call()
+                    self.speak_and_hang(speech)
                 else:
                     # User 2 User
                     pass
@@ -268,11 +279,6 @@ class SIPSkill(FallbackSkill):
             # if in call always intercept utterance / assume false activation
             return True
         return False
-
-    def _wait_until_call_established(self):
-        # TTS in voice call and hang
-        while not self.sip.call_established:
-            sleep(0.5)  # TODO timeout in case of errors
 
     @intent_file_handler("restart.intent")
     def handle_restart(self, message):
@@ -313,8 +319,7 @@ class SIPSkill(FallbackSkill):
         utterance = message.data["speech"]
 
         def cb():
-            self.sip.speak(utterance)
-            self.hang_call()
+            self.speak_and_hang(utterance)
 
         self.cb = cb
         self.handle_call_contact(message)
