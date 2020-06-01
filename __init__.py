@@ -375,6 +375,13 @@ class SIPSkill(FallbackSkill):
         self.settings["auto_reject"] = False
         self.speak_dialog("no_auto")
 
+    @intent_file_handler("call_status.intent")
+    def handle_status(self, message):
+        if self.sip is not None:
+            self.speak_dialog("call_status", {"status": self.sip.call_status})
+        else:
+            self.speak_dialog("sip_not_running")
+
     # converse
     def converse_keepalive(self):
         while True:

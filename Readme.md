@@ -53,6 +53,7 @@ X is assumed to be a previously configured contact
 - Do not handle calls automatically
 - how many contacts
 - List contacts
+- Call status
 
 There also a few admin/debug intents, you should never need to use these
 
