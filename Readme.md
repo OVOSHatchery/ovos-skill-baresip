@@ -59,3 +59,8 @@ There also a few admin/debug intents, you should never need to use these
 
 - restart sip
 - sip login
+
+
+# Credits
+
+This work as been sponsored by Matt Keys, [eZuce Inc](https://ezuce.com/)

@@ -75,6 +75,35 @@
             "value": "false"
           }
         ]
+      },
+      {
+        "name": "SipXCom",
+        "fields": [
+          {
+            "name": "sipxcom_gateway",
+            "type": "text",
+            "label": "sipxcom REST api url",
+            "value": "https://sipx.mattkeys.net"
+          },
+          {
+            "name": "sipxcom_user",
+            "type": "text",
+            "label": "sipxcom username",
+            "value": "MattKeys"
+          },
+          {
+            "name": "sipxcom_password",
+            "type": "password",
+            "label": "sipxcom password",
+            "value": "secret"
+          },
+          {
+            "name": "sipxcom_sync",
+            "type": "checkbox",
+            "label": "automatically retrieve contacts from sipxcom",
+            "value": "false"
+          }
+        ]
       }
     ]
   }

@@ -7,6 +7,114 @@ from baresipy.contacts import ContactList
 from baresipy import BareSIP
 from itertools import chain
 from time import sleep
+from collections import defaultdict
+from xml.etree import cElementTree as ET
+import requests
+from requests.auth import HTTPBasicAuth
+
+
+def etree2dict(t):
+    d = {t.tag: {} if t.attrib else None}
+    children = list(t)
+    if children:
+        dd = defaultdict(list)
+        for dc in map(etree2dict, children):
+            for k, v in dc.items():
+                dd[k].append(v)
+        d = {t.tag: {k: v[0] if len(v) == 1 else v for k, v in dd.items()}}
+    if t.attrib:
+        d[t.tag].update(('@' + k, v) for k, v in t.attrib.items())
+    if t.text:
+        text = t.text.strip()
+        if children or t.attrib:
+            if text:
+                d[t.tag]['#text'] = text
+        else:
+            d[t.tag] = text
+    return d
+
+
+def xml2dict(xml_string):
+    def _clean_dict(d):
+        cleaned = {}
+        for k in d:
+            if isinstance(d[k], dict):
+                d[k] = _clean_dict(d[k])
+
+            if isinstance(d[k], list):
+                for idx, entry in enumerate(d[k]):
+                    if isinstance(entry, dict):
+                        d[k][idx] = _clean_dict(entry)
+
+            n = k
+            if k.startswith("@") or k.startswith("#"):
+                n = k[1:]
+            cleaned[n] = d[k]
+        return cleaned
+
+    try:
+        xml_string = xml_string.replace('xmlns="http://www.w3.org/1999/xhtml"',
+                                        "")
+        e = ET.XML(xml_string)
+        d = etree2dict(e)
+        return _clean_dict(d)
+    except:
+        return {}
+
+
+class SipXCom:
+    def __init__(self, user, pswd, gateway):
+        self.gateway = gateway.replace("https://", "").replace("http://", "")
+        self.base_url = "https://{gateway}/sipxconfig/rest/my/". \
+            format(gateway=self.gateway)
+
+        self.user = user
+        self.pswd = pswd
+
+    def check_auth(self):
+        url = self.base_url + "speeddial"
+        data = requests.get(url, verify=False,
+                            auth=HTTPBasicAuth(self.user, self.pswd))
+        return data.status_code == 200
+
+    def speeddial(self):
+        url = self.base_url + "speeddial"
+        data = requests.get(url, verify=False,
+                            auth=HTTPBasicAuth(self.user, self.pswd)).json()
+        return data
+
+    def phonebook(self):
+        url = self.base_url + "phonebook"
+        data = requests.get(url, verify=False,
+                            auth=HTTPBasicAuth(self.user, self.pswd))
+        data = xml2dict(data.text)
+        return data
+
+    def speeddial_contacts(self):
+        data = self.speeddial()
+        contacts = [{"name": a["label"].replace("_", " ").replace("-", " ").strip(),
+                     "url": a["number".strip()]} for a in
+                    data["buttons"]]
+        return contacts
+
+    def phonebook_contacts(self):
+        data = self.phonebook()
+        contacts = [
+            {"name": a["contact-information"]["imDisplayName"].replace("_", " ").replace("-", " ").strip(),
+             "url": a["number"].strip() + "@" + self.gateway} for a in
+            data["phonebook"]["entry"]]
+        return contacts
+
+    def get_contacts(self, dedup=True):
+        if dedup:
+            contacts = self.speeddial_contacts()
+            addr_list = [c["name"] for c in contacts]
+            for c in self.phonebook_contacts():
+                if c["name"] not in addr_list:
+                    contacts.append(c)
+        else:
+            contacts = self.speeddial_contacts() + self.phonebook_contacts()
+        return contacts
 
 
 class SIPSkill(FallbackSkill):
@@ -48,6 +156,16 @@ class SIPSkill(FallbackSkill):
         if "password" not in self.settings:
             self.settings["password"] = None
 
+        # sipxcom integration
+        if "sipxcom_user" not in self.settings:
+            self.settings["sipxcom_user"] = None
+        if "sipxcom_gateway" not in self.settings:
+            self.settings["sipxcom_gateway"] = None
+        if "sipxcom_password" not in self.settings:
+            self.settings["sipxcom_password"] = None
+        if "sipxcom_sync" not in self.settings:
+            self.settings["sipxcom_sync"] = False
+
         # events
         self.settings_change_callback = self._on_web_settings_change
         self.namespace = self.__class__.__name__.lower()
@@ -65,6 +183,21 @@ class SIPSkill(FallbackSkill):
         self.cb = None
         self.contacts = ContactList("mycroft_sip")
 
+    def sipxcom_sync(self):
+        try:
+            sipxcom = SipXCom(self.settings["sipxcom_user"],
+                              self.settings["sipxcom_password"],
+                              self.settings["sipxcom_gateway"])
+            if sipxcom.check_auth():
+                contacts = sipxcom.get_contacts(True)
+                for c in contacts:
+                    self.add_new_contact(c["name"], c["url"], prompt=True)
+            else:
+                self.speak_dialog("sipxcom_badcreds")
+        except Exception as e:
+            self.speak_dialog("sipxcom_sync_error")
+            self.log.exception(e)
+
     def initialize(self):
         self.register_fallback(self.handle_fallback,
                                int(self.settings["priority"]))
@@ -76,6 +209,8 @@ class SIPSkill(FallbackSkill):
             # TODO sort by length
             self.say_vocab = list(chain(*read_vocab_file(say_voc)))
         self.start_sip()
+        if self.settings["sipxcom_sync"]:
+            self.sipxcom_sync()
 
     def _on_web_settings_change(self):
         # TODO settings should be uploaded to backend when changed inside
@@ -102,6 +237,9 @@ class SIPSkill(FallbackSkill):
                     self._old_settings["auto_speech"]:
                 self.speak_dialog("accept_all",
                                   {"speech": self.settings["auto_speech"]})
+
+        if self.settings["sipxcom_sync"]:
+            self.sipxcom_sync()
 
         if self.sip is None:
             if self.settings["gateway"]:
@@ -151,36 +289,44 @@ class SIPSkill(FallbackSkill):
         self.intercepting_utterances = False
 
     def add_new_contact(self, name, address, prompt=False):
+        name = name.replace("_", " ").replace("-", " ").strip()
+        address = address.strip()
         contact = self.contacts.get_contact(name)
         # new address
         if contact is None:
             self.log.info("Adding new contact {name}:{address}".format(
                 name=name, address=address))
             self.contacts.add_contact(name, address)
-            self.speak_dialog("contact_added", {"contact": name})
+            self.speak_dialog("contact_added", {"contact": name}, wait=True)
         # update contact (address exist)
         else:
-            contact = self.contacts.search_contact(address)
-            if prompt:
-                if self.ask_yesno(self, "update_confirm",
+            contact = self.contacts.search_contact(address) or contact
+            if prompt and \
+                    (name != contact["name"] or address != contact["url"]):
+                if self.ask_yesno("update_confirm",
                                   data={"contact": name}) == "no":
                     return
             self.log.info("Updating contact {name}:{address}".format(
                 name=name, address=address))
             if name != contact["name"]:
                 # new name (unique ID)
+                print(name, address)
+                print(contact)
                 self.contacts.remove_contact(contact["name"])
                 self.contacts.add_contact(name, address)
-                self.speak_dialog("contact_updated", {"contact": name})
+                self.speak_dialog("contact_updated", {"contact": name},
+                                  wait=True)
             elif address != contact["url"]:
                 # new address
                 self.contacts.update_contact(name, address)
-                self.speak_dialog("contact_updated", {"contact": name})
+                self.speak_dialog("contact_updated", {"contact": name},
+                                  wait=True)
 
     def delete_contact(self, name, prompt=False):
+        name = name.replace("_", " ").replace("-", " ").strip()
         if self.contacts.get_contact(name):
             if prompt:
-                if self.ask_yesno(self, "delete_confirm",
+                if self.ask_yesno("delete_confirm",
                                   data={"contact": name}) == "no":
                     return
             self.log.info("Deleting contact {name}".format(name=name))
@@ -382,6 +528,10 @@ class SIPSkill(FallbackSkill):
         else:
             self.speak_dialog("sip_not_running")
 
+    @intent_file_handler("sipxcom_sync.intent")
+    def handle_syncs(self, message):
+        self.sipxcom_sync()
+
     # converse
     def converse_keepalive(self):
         while True:
@@ -391,7 +541,7 @@ class SIPSkill(FallbackSkill):
             time.sleep(60)
 
     def converse(self, utterances, lang="en-us"):
-        if self.settings["intercept_allowed"]:
+        if self.settings["intercept_allowed"] and utterances is not None:
             self.log.debug("{name}: Intercept stage".format(
                 name=self.skill_name))
             return self.handle_utterance(utterances[0])
