@@ -13,110 +13,6 @@ import requests
 from requests.auth import HTTPBasicAuth
 
 
-def etree2dict(t):
-    d = {t.tag: {} if t.attrib else None}
-    children = list(t)
-    if children:
-        dd = defaultdict(list)
-        for dc in map(etree2dict, children):
-            for k, v in dc.items():
-                dd[k].append(v)
-        d = {t.tag: {k: v[0] if len(v) == 1 else v for k, v in dd.items()}}
-    if t.attrib:
-        d[t.tag].update(('@' + k, v) for k, v in t.attrib.items())
-    if t.text:
-        text = t.text.strip()
-        if children or t.attrib:
-            if text:
-                d[t.tag]['#text'] = text
-        else:
-            d[t.tag] = text
-    return d
-
-
-def xml2dict(xml_string):
-    def _clean_dict(d):
-        cleaned = {}
-        for k in d:
-            if isinstance(d[k], dict):
-                d[k] = _clean_dict(d[k])
-
-            if isinstance(d[k], list):
-                for idx, entry in enumerate(d[k]):
-                    if isinstance(entry, dict):
-                        d[k][idx] = _clean_dict(entry)
-
-            n = k
-            if k.startswith("@") or k.startswith("#"):
-                n = k[1:]
-            cleaned[n] = d[k]
-        return cleaned
-
-    try:
-        xml_string = xml_string.replace('xmlns="http://www.w3.org/1999/xhtml"',
-                                        "")
-        e = ET.XML(xml_string)
-        d = etree2dict(e)
-        return _clean_dict(d)
-    except:
-        return {}
-
-
-class SipXCom:
-    def __init__(self, user, pswd, gateway):
-        self.gateway = gateway.replace("https://", "").replace("http://", "")
-        self.base_url = "https://{gateway}/sipxconfig/rest/my/". \
-            format(gateway=self.gateway)
-
-        self.user = user
-        self.pswd = pswd
-
-    def check_auth(self):
-        url = self.base_url + "speeddial"
-        data = requests.get(url, verify=False,
-                            auth=HTTPBasicAuth(self.user, self.pswd))
-        return data.status_code == 200
-
-    def speeddial(self):
-        url = self.base_url + "speeddial"
-        data = requests.get(url, verify=False,
-                            auth=HTTPBasicAuth(self.user, self.pswd)).json()
-        return data
-
-    def phonebook(self):
-        url = self.base_url + "phonebook"
-        data = requests.get(url, verify=False,
-                            auth=HTTPBasicAuth(self.user, self.pswd))
-        data = xml2dict(data.text)
-        return data
-
-    def speeddial_contacts(self):
-        data = self.speeddial()
-        contacts = [{"name": a["label"].replace("_", " ").replace("-", " ").strip(),
-                     "url": a["number".strip()]} for a in
-                    data["buttons"]]
-        return contacts
-
-    def phonebook_contacts(self):
-        data = self.phonebook()
-        contacts = [
-            {"name": a["contact-information"]["imDisplayName"].replace("_", " ").replace("-", " ").strip(),
-             "url": a["number"].strip() + "@" + self.gateway} for a in
-            data["phonebook"]["entry"]]
-        return contacts
-
-    def get_contacts(self, dedup=True):
-        if dedup:
-            contacts = self.speeddial_contacts()
-            addr_list = [c["name"] for c in contacts]
-            for c in self.phonebook_contacts():
-                if c["name"] not in addr_list:
-                    contacts.append(c)
-        else:
-            contacts = self.speeddial_contacts() + self.phonebook_contacts()
-        return contacts
-
-
 class SIPSkill(FallbackSkill):
     def __init__(self):
         super(SIPSkill, self).__init__(name='SIPSkill')
@@ -182,21 +78,6 @@ class SIPSkill(FallbackSkill):
         self.say_vocab = None
         self.cb = None
         self.contacts = ContactList("mycroft_sip")
-
-    def sipxcom_sync(self):
-        try:
-            sipxcom = SipXCom(self.settings["sipxcom_user"],
-                              self.settings["sipxcom_password"],
-                              self.settings["sipxcom_gateway"])
-            if sipxcom.check_auth():
-                contacts = sipxcom.get_contacts(True)
-                for c in contacts:
-                    self.add_new_contact(c["name"], c["url"], prompt=True)
-            else:
-                self.speak_dialog("sipxcom_badcreds")
-        except Exception as e:
-            self.speak_dialog("sipxcom_sync_error")
-            self.log.exception(e)
 
     def initialize(self):
         self.register_fallback(self.handle_fallback,
@@ -528,9 +409,25 @@ class SIPSkill(FallbackSkill):
         else:
             self.speak_dialog("sip_not_running")
 
+    # sipxcom intents
     @intent_file_handler("sipxcom_sync.intent")
     def handle_syncs(self, message):
         self.sipxcom_sync()
+
+    def sipxcom_sync(self):
+        try:
+            sipxcom = SipXCom(self.settings["sipxcom_user"],
+                              self.settings["sipxcom_password"],
+                              self.settings["sipxcom_gateway"])
+            if sipxcom.check_auth():
+                contacts = sipxcom.get_contacts(True)
+                for c in contacts:
+                    self.add_new_contact(c["name"], c["url"], prompt=True)
+            else:
+                self.speak_dialog("sipxcom_badcreds")
+        except Exception as e:
+            self.speak_dialog("sipxcom_sync_error")
+            self.log.exception(e)
 
     # converse
     def converse_keepalive(self):
@@ -564,6 +461,112 @@ class SIPSkill(FallbackSkill):
             self.sip.quit()
         self.stop_converse()
         super(SIPSkill, self).shutdown()
+
+
+# SIPXCOM integration
+
+def etree2dict(t):
+    d = {t.tag: {} if t.attrib else None}
+    children = list(t)
+    if children:
+        dd = defaultdict(list)
+        for dc in map(etree2dict, children):
+            for k, v in dc.items():
+                dd[k].append(v)
+        d = {t.tag: {k: v[0] if len(v) == 1 else v for k, v in dd.items()}}
+    if t.attrib:
+        d[t.tag].update(('@' + k, v) for k, v in t.attrib.items())
+    if t.text:
+        text = t.text.strip()
+        if children or t.attrib:
+            if text:
+                d[t.tag]['#text'] = text
+        else:
+            d[t.tag] = text
+    return d
+
+
+def xml2dict(xml_string):
+    def _clean_dict(d):
+        cleaned = {}
+        for k in d:
+            if isinstance(d[k], dict):
+                d[k] = _clean_dict(d[k])
+
+            if isinstance(d[k], list):
+                for idx, entry in enumerate(d[k]):
+                    if isinstance(entry, dict):
+                        d[k][idx] = _clean_dict(entry)
+
+            n = k
+            if k.startswith("@") or k.startswith("#"):
+                n = k[1:]
+            cleaned[n] = d[k]
+        return cleaned
+
+    try:
+        xml_string = xml_string.replace('xmlns="http://www.w3.org/1999/xhtml"',
+                                        "")
+        e = ET.XML(xml_string)
+        d = etree2dict(e)
+        return _clean_dict(d)
+    except:
+        return {}
+
+
+class SipXCom:
+    def __init__(self, user, pswd, gateway):
+        self.gateway = gateway.replace("https://", "").replace("http://", "")
+        self.base_url = "https://{gateway}/sipxconfig/rest/my/". \
+            format(gateway=self.gateway)
+
+        self.user = user
+        self.pswd = pswd
+
+    def check_auth(self):
+        url = self.base_url + "speeddial"
+        data = requests.get(url, verify=False,
+                            auth=HTTPBasicAuth(self.user, self.pswd))
+        return data.status_code == 200
+
+    def speeddial(self):
+        url = self.base_url + "speeddial"
+        data = requests.get(url, verify=False,
+                            auth=HTTPBasicAuth(self.user, self.pswd)).json()
+        return data
+
+    def phonebook(self):
+        url = self.base_url + "phonebook"
+        data = requests.get(url, verify=False,
+                            auth=HTTPBasicAuth(self.user, self.pswd))
+        data = xml2dict(data.text)
+        return data
+
+    def speeddial_contacts(self):
+        data = self.speeddial()
+        contacts = [{"name": a["label"].replace("_", " ").replace("-", " ").strip(),
+                     "url": a["number".strip()]} for a in
+                    data["buttons"]]
+        return contacts
+
+    def phonebook_contacts(self):
+        data = self.phonebook()
+        contacts = [
+            {"name": a["contact-information"]["imDisplayName"].replace("_", " ").replace("-", " ").strip(),
+             "url": a["number"].strip() + "@" + self.gateway} for a in
+            data["phonebook"]["entry"]]
+        return contacts
+
+    def get_contacts(self, dedup=True):
+        if dedup:
+            contacts = self.speeddial_contacts()
+            addr_list = [c["name"] for c in contacts]
+            for c in self.phonebook_contacts():
+                if c["name"] not in addr_list:
+                    contacts.append(c)
+        else:
+            contacts = self.speeddial_contacts() + self.phonebook_contacts()
+        return contacts
 
 
 def create_skill():
