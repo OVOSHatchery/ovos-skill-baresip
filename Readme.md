@@ -87,8 +87,6 @@ NOTE: for linphone users, outgoing calls work but incoming calls dont, see [flex
 
 You can add contacts under home.mycroft.ai (no privacy!) or manually edit the json file at ```~/.baresip/mycroft_sip```
 
-NOTE: contacts are WIP, basically a name mycroft can understand mapped to a sip address
-
     TODO guide for both approaches
 
 ## Intents
@@ -118,6 +116,12 @@ There also a few admin/debug intents, you should never need to use these
 - restart sip
 - sip login
 
+
+# Known issues
+
+- There is an issue with mycroft backend, it will overwrite any changes you 
+make to skill settings, for now avoid setting auto-answer etc by voice and 
+use the web ui only
 
 # Credits
 
