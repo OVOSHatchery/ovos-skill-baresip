@@ -11,7 +11,7 @@ Add VOIP capabilities to Mycroft using Baresip
 The skill can be easily installed with Mycroft Skill Manager
 
 ```bash
-msm install https://github.com/JarbasSkills/skill--voip
+msm install https://github.com/JarbasSkills/skill-voip
 ```
 
 ## Mark1
@@ -63,7 +63,7 @@ Now to install the actual skill
 
 ```bash
 pi@mark_1:~ $ cd opt/mycroft/skills
-pi@mark_1:~ $ git clone https://github.com/JarbasSkills/skill--voip
+pi@mark_1:~ $ git clone https://github.com/JarbasSkills/skill-voip
 pi@mark_1:~ $ cd skill--voip
 pi@mark_1:~ $ mycroft-pip install -r requirements.txt
 ```
