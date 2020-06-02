@@ -165,7 +165,6 @@ class SIPSkill(FallbackSkill):
 
     # SIP
     def _wait_until_call_established(self):
-        # TTS in voice call and hang
         while not self.sip.call_established:
             sleep(0.5)  # TODO timeout in case of errors
 
@@ -207,8 +206,6 @@ class SIPSkill(FallbackSkill):
                 name=name, address=address))
             if name != contact["name"]:
                 # new name (unique ID)
-                print(name, address)
-                print(contact)
                 self.contacts.remove_contact(contact["name"])
                 self.contacts.add_contact(name, address)
                 self.speak_dialog("contact_updated", {"contact": name},
@@ -243,7 +240,8 @@ class SIPSkill(FallbackSkill):
             self.cb = None
 
     def handle_login_success(self):
-        self.speak_dialog("sip_login_success")
+        pass
+        #self.speak_dialog("sip_login_success")
 
     def handle_login_failure(self):
         self.log.error("Log in failed!")
