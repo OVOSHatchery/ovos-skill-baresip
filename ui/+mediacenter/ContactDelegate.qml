@@ -16,10 +16,9 @@
  */
 
 import QtQuick.Layouts 1.4
-import QtQuick 2.4
+import QtQuick 2.9
 import QtQuick.Controls 2.2
-import org.kde.plasma.core 2.0 as PlasmaCore
-import org.kde.kirigami 2.4 as Kirigami
+import org.kde.kirigami 2.8 as Kirigami
 import Mycroft 1.0 as Mycroft
 
 Kirigami.AbstractListItem {
@@ -43,7 +42,7 @@ Kirigami.AbstractListItem {
                 Layout.alignment: Qt.AlignVCenter | Qt.AlignLeft
                 Layout.preferredHeight: units.iconSizes.medium
                 Layout.preferredWidth: units.iconSizes.medium
-                source: "images/avatar.png"
+                source: "../images/avatar.png"
             }
 
             Kirigami.Heading {
@@ -68,6 +67,10 @@ Kirigami.AbstractListItem {
             
             onClicked: {
                 triggerGuiEvent("voip.jarbas.callContact", {"contact": name})
+            }
+            
+            Keys.onReturnPressed: {
+                clicked()
             }
         }
     }

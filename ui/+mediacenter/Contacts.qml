@@ -25,6 +25,10 @@ Item {
     id: contactsPage
     anchors.fill: parent
     
+    Component.onCompleted: {
+        contactsView.forceActiveFocus()
+    }
+    
     RowLayout {
         id: contactsPageHeading
         anchors.top: parent.top
@@ -37,7 +41,7 @@ Item {
             Layout.leftMargin: Kirigami.Units.largeSpacing
             Layout.preferredWidth: Kirigami.Units.iconSizes.medium
             Layout.preferredHeight: Kirigami.Units.iconSizes.medium
-            source: "images/back.png"
+            source: "../images/back.png"
             MouseArea {
                 anchors.fill: parent
                 onClicked: Mycroft.MycroftController.sendRequest("mycroft.mark2.reset_idle", {})
@@ -71,6 +75,8 @@ Item {
         anchors.topMargin: Kirigami.Units.largeSpacing
         anchors.bottomMargin: Kirigami.Units.gridUnit
         model: voipLoaderView.contactListModel
+        keyNavigationEnabled: true
+        highlightFollowsCurrentItem: true
         clip: true
         delegate: ContactDelegate{}
     }

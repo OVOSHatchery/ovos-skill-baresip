@@ -33,15 +33,6 @@ Mycroft.Delegate {
         rootLoader.setSource(source)
     }
     
-    Connections {
-        target: window
-        onClosingChanged: {
-            if(close.accepted) {
-                triggerGuiEvent("voip.jarbas.hangCall", {})
-            }
-        }
-    }
-    
     onContactNameChanged: {
         console.log(contactName)
     }

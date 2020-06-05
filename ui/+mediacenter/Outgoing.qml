@@ -27,12 +27,16 @@ Item {
     
     ColumnLayout {
         anchors.fill: parent
+        
+        Component.onCompleted: {
+            rejectButton.forceActiveFocus()
+        }
             
         LottieAnimation {
             id: l1
             Layout.fillWidth: true
             Layout.fillHeight: true
-            source: Qt.resolvedUrl("animations/outgoing.json")
+            source: Qt.resolvedUrl("../animations/outgoing.json")
             loops: Animation.Infinite
             fillMode: Image.PreserveAspectFit
             running: true
@@ -74,6 +78,8 @@ Item {
                 background: Rectangle {
                     color: "red"
                     radius: Kirigami.Units.gridUnit
+                    border.width: rejectButton.activeFocus ? 1 : 0
+                    border.color: rejectButton.activeFocus ? Kirigami.Theme.linkColor : "transparent"
                 }
                 
                 contentItem: Item {
@@ -81,12 +87,16 @@ Item {
                         anchors.centerIn: parent
                         width: Kirigami.Units.iconSizes.medium
                         height: width
-                        source: "images/phone-reject.png"
+                        source: "../images/phone-reject.png"
                     }
                 }
                 
                 onClicked: {
                     triggerGuiEvent("voip.jarbas.hangCall", {})
+                }
+                
+                Keys.onReturnPressed: {
+                    clicked()
                 }
             }
         }
