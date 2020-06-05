@@ -16,10 +16,11 @@
  */
 
 import QtQuick.Layouts 1.4
-import QtQuick 2.4
-import QtQuick.Controls 2.0
-import org.kde.kirigami 2.5 as Kirigami
+import QtQuick 2.9
+import QtQuick.Controls 2.2
+import org.kde.kirigami 2.8 as Kirigami
 import org.kde.lottie 1.0
+import Mycroft 1.0 as Mycroft
 
 Item {
     id: incomingView

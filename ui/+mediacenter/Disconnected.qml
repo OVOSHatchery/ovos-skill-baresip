@@ -86,7 +86,7 @@ Item {
                     anchors.verticalCenter: parent.verticalCenter
                     width: parent.height * 0.75
                     height: width
-                    source: "images/disconnected.png" 
+                    source: "../images/disconnected.png" 
                 }
                 Label {
                     id: connectionTextHeading

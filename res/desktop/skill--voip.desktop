@@ -1,0 +1,11 @@
+[Desktop Entry]
+X-DBUS-StartupType=None
+X-KDE-StartupNotify=false
+Version=1.0
+Terminal=false
+Type=Application
+Name=VoIP
+Exec=mycroft-gui-app --hideTextInput --skill=skill--voip.jarbasskills.home
+Icon=voip-skill
+Categories=VoiceApp
+StartupNotify=false

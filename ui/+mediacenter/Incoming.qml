@@ -25,6 +25,10 @@ import Mycroft 1.0 as Mycroft
 Item {
     id: incomingView
     
+    Component.onCompleted: {
+        answerButton.forceActiveFocus()
+    }
+    
     ColumnLayout {
         anchors.fill: parent
             
@@ -32,7 +36,7 @@ Item {
             id: l1
             Layout.fillWidth: true
             Layout.fillHeight: true
-            source: Qt.resolvedUrl("animations/outgoing.json")
+            source: Qt.resolvedUrl("../animations/incoming.json")
             loops: Animation.Infinite
             fillMode: Image.PreserveAspectFit
             running: true
@@ -53,7 +57,7 @@ Item {
                 wrapMode: Text.WordWrap
                 anchors.centerIn: parent
                 font.bold: true
-                text: voipLoaderView.contactName != "Unknown" ? "Calling " + voipLoaderView.contactName : "Calling Unknown"
+                text: voipLoaderView.contactName != "Unknown" ? voipLoaderView.contactName : "Unknown"
                 color: Kirigami.Theme.linkColor
             }
         }
@@ -65,15 +69,18 @@ Item {
             Layout.leftMargin: Kirigami.Units.gridUnit * 2
             Layout.rightMargin: Kirigami.Units.gridUnit * 2
             spacing: Kirigami.Units.largeSpacing
-                        
+            
             Button {
-                id: rejectButton
+                id: answerButton
                 Layout.fillWidth: true
                 Layout.preferredHeight: Kirigami.Units.gridUnit * 4
+                KeyNavigation.down: rejectButton
                 
                 background: Rectangle {
-                    color: "red"
+                    color: "green"
                     radius: Kirigami.Units.gridUnit
+                    border.width: answerButton.activeFocus ? 1 : 0
+                    border.color: answerButton.activeFocus ? Kirigami.Theme.linkColor : "transparent"
                 }
                 
                 contentItem: Item {
@@ -81,12 +88,47 @@ Item {
                         anchors.centerIn: parent
                         width: Kirigami.Units.iconSizes.medium
                         height: width
-                        source: "images/phone-reject.png"
+                        source: "../images/phone-answer.png"
+                    }
+                }
+                
+                onClicked: {
+                    triggerGuiEvent("voip.jarbas.acceptCall", {})
+                }
+                
+                Keys.onReturnPressed: {
+                    clicked()
+                }
+            }
+            
+            Button {
+                id: rejectButton
+                Layout.fillWidth: true
+                Layout.preferredHeight: Kirigami.Units.gridUnit * 4
+                KeyNavigation.up: answerButton
+                
+                background: Rectangle {
+                    color: "red"
+                    radius: Kirigami.Units.gridUnit
+                    border.width: rejectButton.activeFocus ? 1 : 0
+                    border.color: rejectButton.activeFocus ? Kirigami.Theme.linkColor : "transparent"
+                }
+                
+                contentItem: Item {
+                    Image {
+                        anchors.centerIn: parent
+                        width: Kirigami.Units.iconSizes.medium
+                        height: width
+                        source: "../images/phone-reject.png"
                     }
                 }
                 
                 onClicked: {
                     triggerGuiEvent("voip.jarbas.hangCall", {})
+                }
+                
+                Keys.onReturnPressed: {
+                    clicked()
                 }
             }
         }
