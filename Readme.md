@@ -128,3 +128,5 @@ use the web ui only
 This work as been sponsored by Matt Keys, [eZuce Inc](https://ezuce.com/)
 
 The GUI was made by [AIIX](https://github.com/AIIX/)
+
+<meta name="ocs-site-verification" content="8b4504b05f4c0b263ff59f5e4919a6e4" /> 
