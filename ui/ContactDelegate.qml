@@ -16,14 +16,14 @@
  */
 
 import QtQuick.Layouts 1.4
-import QtQuick 2.4
+import QtQuick 2.9
 import QtQuick.Controls 2.2
-import org.kde.plasma.core 2.0 as PlasmaCore
-import org.kde.kirigami 2.4 as Kirigami
+import org.kde.kirigami 2.8 as Kirigami
 import Mycroft 1.0 as Mycroft
 
 Kirigami.AbstractListItem {
     id: contactDelegate
+    backgroundColor: Qt.rgba(0, 0, 0, 1)
     
     contentItem: Item {
         implicitWidth: delegateLayout.implicitWidth;
@@ -36,13 +36,13 @@ Kirigami.AbstractListItem {
                 top: parent.top;
                 right: parent.right;
             }
-            spacing: Math.round(units.gridUnit / 2)
+            spacing: Math.round(Kirigami.Units.gridUnit / 2)
 
             Image {
                 id: contactIcon
                 Layout.alignment: Qt.AlignVCenter | Qt.AlignLeft
-                Layout.preferredHeight: units.iconSizes.medium
-                Layout.preferredWidth: units.iconSizes.medium
+                Layout.preferredHeight: Kirigami.Units.iconSizes.medium
+                Layout.preferredWidth: Kirigami.Units.iconSizes.medium
                 source: "images/avatar.png"
             }
 
@@ -50,7 +50,7 @@ Kirigami.AbstractListItem {
                 id: contactNameLabel
                 level: 2
                 Layout.alignment: Qt.AlignVCenter | Qt.AlignLeft
-                color: Kirigami.Theme.textColor
+                color: "white"
                 elide: Text.ElideRight
                 text: name
                 textFormat: Text.PlainText
@@ -59,16 +59,16 @@ Kirigami.AbstractListItem {
             Label {
                 id: contactUrlLabel
                 Layout.alignment: Qt.AlignVCenter | Qt.AlignRight
-                color: Kirigami.Theme.textColor
+                color: "white"
                 opacity: 0.8
                 elide: Text.ElideRight
                 text: url
                 textFormat: Text.PlainText
             }
-            
-            onClicked: {
-                triggerGuiEvent("voip.jarbas.callContact", {"contact": name})
-            }
         }
+    }
+    
+    onClicked: {
+        triggerGuiEvent("voip.jarbas.callContact", {"contact": name})
     }
 }

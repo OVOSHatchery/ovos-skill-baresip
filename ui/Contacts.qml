@@ -38,6 +38,7 @@ Item {
             Layout.preferredWidth: Kirigami.Units.iconSizes.medium
             Layout.preferredHeight: Kirigami.Units.iconSizes.medium
             source: "images/back.png"
+            
             MouseArea {
                 anchors.fill: parent
                 onClicked: Mycroft.MycroftController.sendRequest("mycroft.mark2.reset_idle", {})
@@ -47,10 +48,11 @@ Item {
         Kirigami.Heading {
             level: 1
             Layout.fillWidth: true
+            Layout.leftMargin: -Kirigami.Units.iconSizes.medium
             horizontalAlignment: Text.AlignHCenter
             font.bold: true
-            text: i18n("Contacts")
-            color: Kirigami.Theme.highlightColor
+            text: "Contacts"
+            color: "#03adfc"
         }
     }
         

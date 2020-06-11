@@ -64,14 +64,14 @@ Kirigami.AbstractListItem {
                 text: url
                 textFormat: Text.PlainText
             }
-            
-            onClicked: {
-                triggerGuiEvent("voip.jarbas.callContact", {"contact": name})
-            }
-            
-            Keys.onReturnPressed: {
-                clicked()
-            }
         }
+    }
+    
+    onClicked: {
+        triggerGuiEvent("voip.jarbas.callContact", {"contact": name})
+    }
+    
+    Keys.onReturnPressed: {
+        clicked()
     }
 }
