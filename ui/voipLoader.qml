@@ -18,6 +18,7 @@
 import QtQuick.Layouts 1.4
 import QtQuick 2.9
 import QtQuick.Controls 2.2
+import QtQuick.Window 2.2
 import org.kde.kirigami 2.8 as Kirigami
 import Mycroft 1.0 as Mycroft
 
@@ -34,7 +35,7 @@ Mycroft.Delegate {
     }
     
     Connections {
-        target: window
+        target: Window.window
         onClosingChanged: {
             if(close.accepted) {
                 triggerGuiEvent("voip.jarbas.hangCall", {})

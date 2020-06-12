@@ -51,6 +51,7 @@ Item {
         Kirigami.Heading {
             level: 1
             Layout.fillWidth: true
+            Layout.leftMargin: -Kirigami.Units.iconSizes.medium
             horizontalAlignment: Text.AlignHCenter
             font.bold: true
             text: i18n("Contacts")
