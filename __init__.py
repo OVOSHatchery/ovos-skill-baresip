@@ -101,7 +101,7 @@ class SIPSkill(FallbackSkill):
         self.gui.register_handler("voip.jarbas.unmuteCall", self.unmute_call)
         self.gui.register_handler("voip.jarbas.callContact", self.handle_call_contact_from_gui)
         self.gui.register_handler("voip.jarbas.updateConfig", self.handle_config_from_gui)
-        self.add_event('skill--voip.jarbasskills.home', self.show_homescreen)
+        self.add_event('skill-voip.jarbasskills.home', self.show_homescreen)
         
     def _on_web_settings_change(self):
         # TODO settings should be uploaded to backend when changed inside
