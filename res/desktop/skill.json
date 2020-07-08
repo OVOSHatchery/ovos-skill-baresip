@@ -1,0 +1,26 @@
+{
+  "name": "VoIP Skill",
+  "skillname": "skill-voip",
+  "authorname": "jarbasskills",
+  "foldername": "",
+  "url": "https://github.com/JarbasSkills/skill-voip",
+  "branch": "master",
+  "desktopFile": false,
+  "warning": "",
+  "systemDeps": true,
+  "platforms": [
+    "arm",
+    "arm64",
+    "i386",
+    "x86_64",
+    "ia64"
+  ],
+  "examples": [
+    "call bob",
+    "call bob and say Open Source is AWESOME",
+    "reject call",
+    "accept call",
+    "mute call",
+    "list contacts"
+  ]
+}
