@@ -1,49 +1,13 @@
 # VOIP skill
 
-Add VOIP capabilities to Mycroft using Baresip
+Add VOIP capabilities to OVOS using Baresip
 
 ![](./voip.gif)
-
-# Platform support
-
-- :heavy_check_mark: - tested and confirmed working
-- :x: - incompatible/non-functional
-- :question: - untested
-- :construction: - partial support
-
-|     platform    |   status   |  tag  | version | last tested | 
-|:---------------:|:----------:|:-----:|:-------:|:-----------:|
-|    [Chatterbox](https://hellochatterbox.com)   | :question: |  dev  |         |    never    | 
-|     [HolmesV](https://github.com/HelloChatterbox/HolmesV)     | :question: |  dev  |         |    never    | 
-|    [LocalHive](https://github.com/JarbasHiveMind/LocalHive)    | :question: |  dev  |         |    never    |  
-|  [Mycroft Mark1](https://github.com/MycroftAI/enclosure-mark1)    | :question: |  dev  |         |    never    | 
-|  [Mycroft Mark2](https://github.com/MycroftAI/hardware-mycroft-mark-II)    | :question: |  dev  |         |    never    |  
-|    [NeonGecko](https://neon.ai)      | :question: |  dev  |         |    never    |   
-|       [OVOS](https://github.com/OpenVoiceOS)        | :question: |  dev  |         |    never    |    
-|     [Picroft](https://github.com/MycroftAI/enclosure-picroft)       | :question: |  dev  |         |    never    |  
-| [Plasma Bigscreen](https://plasma-bigscreen.org/)  | :question: |  dev  |         |    never    |  
-
-- `tag` - link to github release / branch / commit
-- `version` - link to release/commit of platform repo where this was tested
 
 
 # Install
 
-## MSM
-
-The skill can be easily installed with Mycroft Skill Manager
-
-```bash
-msm install https://github.com/JarbasSkills/skill-voip
-```
-
-## Mark1
-
-If you are using a mark1 msm will fail
-
-Baresip is not in raspbian jessie repositories, you need to install the old fashioned way
-
-First we need to build some things from source
+## baresip from source
 
 *Libre is a portable and generic library for real-time communications with async IO support and a complete SIP stack with support for SDP, RTP/RTCP, STUN/TURN/ICE, BFCP and DNS Client.*
 
@@ -82,13 +46,15 @@ pi@mark_1:~ $ make
 pi@mark_1:~ $ sudo make install
 ```
 
+## skill
+
 Now to install the actual skill
 
 ```bash
 pi@mark_1:~ $ cd opt/mycroft/skills
 pi@mark_1:~ $ git clone https://github.com/JarbasSkills/skill-voip
 pi@mark_1:~ $ cd skill--voip
-pi@mark_1:~ $ mycroft-pip install -r requirements.txt
+pi@mark_1:~ $ pip install -r requirements.txt
 ```
 
 
@@ -96,7 +62,7 @@ pi@mark_1:~ $ mycroft-pip install -r requirements.txt
 
 ## Credentials
 
-You can either configure credentials in Baresip or use mycroft.home.ai (your credentials will be exposed)
+You can either configure credentials in Baresip or use skill settings
 
     TODO guide for both approaches
 
@@ -108,9 +74,7 @@ NOTE: for linphone users, outgoing calls work but incoming calls dont, see [flex
 
 ## Contacts List
 
-You can add contacts under home.mycroft.ai (no privacy!) or manually edit the json file at ```~/.baresip/mycroft_sip```
-
-    TODO guide for both approaches
+edit the json file at ```~/.baresip/mycroft_sip```
 
 ## Intents
 
@@ -140,16 +104,9 @@ There also a few admin/debug intents, you should never need to use these
 - sip login
 
 
-# Known issues
-
-- There is an issue with mycroft backend, it will overwrite any changes you 
-make to skill settings, for now avoid setting auto-answer etc by voice and 
-use the web ui only
-
 # Credits
 
 This work as been sponsored by Matt Keys, [eZuce Inc](https://ezuce.com/)
 
 The GUI was made by [AIIX](https://github.com/AIIX/)
 
-<meta name="ocs-site-verification" content="8b4504b05f4c0b263ff59f5e4919a6e4" /> 
